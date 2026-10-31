@@ -4,7 +4,7 @@
 // Incrementing CACHE_VERSION will kick off the install event and force
 // previously cached resources to be updated from the network.
 /** @type {string} */
-const CACHE_VERSION = '1793483611|3389898';
+const CACHE_VERSION = '1793486232|3390413';
 /** @type {string} */
 const CACHE_PREFIX = 'PolyTac-sw-cache-';
 const CACHE_NAME = CACHE_PREFIX + CACHE_VERSION;
