@@ -113,7 +113,7 @@ body {
 
 		<script src="index.js"></script>
 		<script>
-const GODOT_CONFIG = {"args":[],"canvasResizePolicy":2,"emscriptenPoolSize":8,"ensureCrossOriginIsolationHeaders":false,"executable":"index","experimentalVK":false,"fileSizes":{"index.pck":924584,"index.wasm":37700666},"focusCanvas":true,"gdextensionLibs":[],"godotPoolSize":4};
+const GODOT_CONFIG = {"args":[],"canvasResizePolicy":2,"emscriptenPoolSize":8,"ensureCrossOriginIsolationHeaders":false,"executable":"index","experimentalVK":false,"fileSizes":{"index.pck":928216,"index.wasm":37700666},"focusCanvas":true,"gdextensionLibs":[],"godotPoolSize":4};
 const GODOT_THREADS_ENABLED = false;
 const engine = new Engine(GODOT_CONFIG);
 
@@ -217,6 +217,75 @@ const engine = new Engine(GODOT_CONFIG);
 	}
 }());
 		</script>
-	</body>
+	<!-- PolyTac loader watchdog, injected by .github/workflows/web.yml before
+     </body>. Godot's web loader never reports some failures: a download that
+     stalls, or the engine failing to start (iOS Safari short of memory after
+     a few reloads). The progress bar then sits there forever. This watches
+     the bar; if the game hasn't started and the bar hasn't moved for
+     STUCK_MS, or the loader shows its own error, it offers a Retry button. -->
+<style>
+#pt-stuck { position: absolute; left: 0; right: 0; bottom: 18%; display: none;
+	flex-direction: column; align-items: center; gap: 0.8rem; z-index: 2;
+	font-family: -apple-system, 'Noto Sans', Arial, sans-serif; color: #cfe9ff;
+	text-align: center; padding: 0 2rem; }
+#pt-stuck button { font-size: 1.2rem; padding: 0.7rem 2.4rem; border-radius: 2rem;
+	border: 2px solid #5fd4ff; background: #0e1a33; color: #5fd4ff; }
+#pt-stuck small { opacity: 0.7; }
+</style>
+<div id="pt-stuck">
+	<div>Loading got stuck.</div>
+	<button type="button" id="pt-retry">Retry</button>
+	<small>If it keeps happening, close this tab and open the link again.</small>
+</div>
+<script>
+(function () {
+	const STUCK_MS = 15000;
+	const box = document.getElementById('pt-stuck');
+	document.getElementById('pt-retry').addEventListener('click', function () {
+		const url = new URL(window.location.href);
+		url.searchParams.set('retry', Date.now().toString());
+		window.location.replace(url.toString());
+	});
+	function show(why) {
+		if (box.style.display === 'flex') {
+			return;
+		}
+		console.warn('PolyTac loader: ' + why);
+		box.style.display = 'flex';
+	}
+	// errors the loader swallows (its promises have no catch)
+	window.addEventListener('unhandledrejection', function (e) {
+		if (document.getElementById('status')) {
+			show('unhandled rejection: ' + (e.reason && e.reason.message || e.reason));
+		}
+	});
+	let last = '';
+	let since = Date.now();
+	const timer = setInterval(function () {
+		const status = document.getElementById('status');
+		// the loader removes its overlay once the game is running
+		if (!status) {
+			clearInterval(timer);
+			box.style.display = 'none';
+			return;
+		}
+		const notice = document.getElementById('status-notice');
+		if (notice && notice.style.display === 'block') {
+			show('loader error');
+			return;
+		}
+		const bar = document.getElementById('status-progress');
+		const now = bar ? bar.value + '/' + bar.max : '';
+		if (now !== last) {
+			last = now;
+			since = Date.now();
+		} else if (Date.now() - since > STUCK_MS) {
+			show('no progress for ' + STUCK_MS + ' ms at ' + now);
+		}
+	}, 1000);
+})();
+</script>
+
+</body>
 </html>
 
